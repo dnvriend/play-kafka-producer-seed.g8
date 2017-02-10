@@ -1,38 +1,32 @@
-package $package$
+package $package$.controller
 
-import java.nio.file.Paths
-import java.nio.file.StandardOpenOption._
+package com.github.dnvriend.controller
+
 import java.util.UUID
 import javax.inject.Inject
 
-import akka.actor.ActorSystem
 import akka.pattern.CircuitBreaker
-import akka.stream.{ ActorMaterializer, IOResult, Materializer }
-import akka.stream.scaladsl.{ FileIO, Source }
-import akka.util.ByteString
 import com.sksamuel.avro4s.RecordFormat
 import org.slf4j.{ Logger, LoggerFactory }
 import play.api.libs.json.{ Format, Json }
 import play.api.mvc.{ Action, AnyContent, Controller, Request }
-import play.modules.kafka.KafkaProducer
+import play.modules.TopicProducer
 
-import scala.compat.Platform
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.Try
-import scalaz.syntax.applicative._
-import scalaz.std.scalaFuture._
 
-final case class CreatePersonDto(name: String, age: Long)
+final case class CreatePersonDto(name: String, age: Long, married: Option[Boolean], children: Option[Long])
 object CreatePersonDto {
   implicit val format = Json.format[CreatePersonDto]
 }
 
-final case class CreatePersonCmd(id: String, name: String, age: Int, married: Option[Boolean] = None, children: Int = 0)
-case object CreatePersonCmd {
-  implicit val recordFormat = RecordFormat[CreatePersonCmd]
+final case class PersonCreated(id: String, name: String, age: Long, married: Option[Boolean] = None, children: Long = 0)
+case object PersonCreated {
+  implicit val recordFormat = RecordFormat[PersonCreated]
+  implicit val format = Json.format[PersonCreated]
 }
 
-class PersonController @Inject() (producer: KafkaProducer, cb: CircuitBreaker)(implicit ec: ExecutionContext) extends Controller {
+class PersonController @Inject() (producer: TopicProducer, cb: CircuitBreaker)(implicit ec: ExecutionContext) extends Controller {
   val log: Logger = LoggerFactory.getLogger(this.getClass)
   def randomId: String = UUID.randomUUID.toString
 
@@ -41,11 +35,11 @@ class PersonController @Inject() (producer: KafkaProducer, cb: CircuitBreaker)(i
 
   def createPerson = Action.async { implicit req =>
     val result = for {
-      person <- Future.fromTry(entityAs[CreatePersonDto])
+      cmd <- Future.fromTry(entityAs[CreatePersonDto])
       id = randomId
-      cmd = CreatePersonCmd(id, person.name, person.age.toInt)
-      _ <- producer.produce("PersonCreatedAvro", id, cmd)
-    } yield Ok(Json.toJson(cmd))
+      event = PersonCreated(id, cmd.name, cmd.age, cmd.married, cmd.children.getOrElse(0))
+      _ <- producer.produce("PersonCreatedAvro", id, event)
+    } yield Ok(Json.toJson(event))
 
     cb.withCircuitBreaker(result)
   }

@@ -1,3 +1,4 @@
+package play.modules
 
 import akka.actor.ActorSystem
 import akka.pattern.CircuitBreaker
@@ -17,4 +18,3 @@ class CircuitBreakerModule extends AbstractModule {
     }
   }
 }
-
