@@ -1,7 +1,5 @@
 package $package$.controller
 
-package com.github.dnvriend.controller
-
 import java.util.UUID
 import javax.inject.Inject
 
