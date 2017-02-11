@@ -8,6 +8,8 @@ scalaVersion := "2.11.8"
 
 val akkaVersion = "2.4.16"
 
+resolvers += "Confluent Maven Repo" at "http://packages.confluent.io/maven/"
+
 // fp
 libraryDependencies += "org.scalaz" %% "scalaz-core" % "7.2.8"
 // kafka
