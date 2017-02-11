@@ -30,7 +30,6 @@ trait TopicProducer {
 class DefaultTopicProducerModule(cb: CircuitBreaker)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext) extends TopicProducer {
   val producerSettings: ProducerSettings[String, GenericRecord] =
     ProducerSettings[String, GenericRecord](system, None, None)
-      .withBootstrapServers("localhost:9092")
 
   val sink: Sink[ProducerRecord[String, GenericRecord], Future[Done]] =
     Producer.plainSink(producerSettings)
